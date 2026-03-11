@@ -5,10 +5,12 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+
+	"os"
 )
 
-var accessSecret = []byte("access-secret")
-var refreshSecret = []byte("refresh-secret")
+var accessSecret = []byte(os.Getenv("JWT_ACCESS_SECRET"))
+var refreshSecret = []byte(os.Getenv("JWT_REFRESH_SECRET"))
 
 type Claims struct {
 	UserID uint
@@ -87,7 +89,12 @@ func ValidateRefreshToken(tokenString string) (*jwt.RegisteredClaims, error) {
 	claims, ok := token.Claims.(*jwt.RegisteredClaims)
 
 	if !ok || !token.Valid {
-		return nil, err
+		return nil, fmt.Errorf("invalid refresh token")
+	}
+
+	// explicit expiry check
+	if claims.ExpiresAt == nil || claims.ExpiresAt.Time.Before(time.Now()) {
+		return nil, fmt.Errorf("refresh token expired")
 	}
 
 	return claims, nil

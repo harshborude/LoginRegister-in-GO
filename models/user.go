@@ -12,11 +12,13 @@ type User struct {
 
 	Role string `gorm:"default:USER"`
 
+	IsActive bool `gorm:"default:true"`
+
+	RefreshToken string `gorm:"type:text" json:"-"`
+
 	Rating               float64 `gorm:"default:0"`
 	TotalAuctionsWon     uint    `gorm:"default:0"`
 	TotalAuctionsCreated uint    `gorm:"default:0"`
-
-	RefreshToken string `gorm:"type:text" json:"-"`
 
 	CreatedAt time.Time
 	UpdatedAt time.Time

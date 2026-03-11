@@ -13,6 +13,7 @@ import (
 	"gorm.io/gorm"
 
 	"strings"
+	"strconv"
 )
 
 type RegisterInput struct {
@@ -368,32 +369,41 @@ func RefreshAccessToken(c *gin.Context) {
 		return
 	}
 
-	userID := claims.Subject
+	userID64, err := strconv.ParseUint(claims.Subject, 10, 64)
+if err != nil {
+	c.JSON(http.StatusUnauthorized, gin.H{
+		"error": "invalid refresh token",
+	})
+	return
+}
+
+userID := uint(userID64)
 
 	var user models.User
 
 	// find user
 	if err := db.DB.First(&user, userID).Error; err != nil {
-
-		log.Printf("error occurred during user lookup in refresh: %v", err)
-
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"error": "invalid refresh token",
 		})
-
 		return
 	}
 
-	// verify token matches stored token
+	// check account status
+	if !user.IsActive {
+		c.JSON(http.StatusForbidden, gin.H{
+			"error": "account disabled",
+		})
+		return
+	}
+
+	// verify stored refresh token
 	if user.RefreshToken != input.RefreshToken {
-
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"error": "invalid refresh token",
 		})
-
 		return
 	}
-
 	// generate new access token
 	accessToken, err := utils.GenerateAccessToken(user.ID, user.Role)
 	if err != nil {
@@ -409,5 +419,50 @@ func RefreshAccessToken(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"access_token": accessToken,
+	})
+}
+
+func LogoutUser(c *gin.Context) {
+
+	userIDRaw, exists := c.Get("user_id")
+
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "unauthorized",
+		})
+		return
+	}
+
+	userID := userIDRaw.(uint)
+
+	var user models.User
+
+	if err := db.DB.First(&user, userID).Error; err != nil {
+
+		log.Printf("error occurred during logout user lookup: %v", err)
+
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "error occurred during logout",
+		})
+
+		return
+	}
+
+	// revoke refresh token
+	user.RefreshToken = ""
+
+	if err := db.DB.Save(&user).Error; err != nil {
+
+		log.Printf("error occurred during logout token revocation: %v", err)
+
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "error occurred during logout",
+		})
+
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "logged out successfully",
 	})
 }

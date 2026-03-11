@@ -15,6 +15,7 @@ func UserRoutes(router *gin.Engine) {
 		users.POST("/register", controllers.RegisterUser)
 		users.POST("/login", controllers.LoginUser)
 		users.POST("/refresh", controllers.RefreshAccessToken)
+		users.POST("/logout", middleware.AuthMiddleware(), controllers.LogoutUser)
 	}
 
 	auth := router.Group("/users")
