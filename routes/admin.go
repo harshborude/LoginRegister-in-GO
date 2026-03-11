@@ -1,0 +1,19 @@
+package routes
+
+import (
+	"backend/controllers"
+	"backend/middleware"
+
+	"github.com/gin-gonic/gin"
+)
+
+func AdminRoutes(router *gin.Engine) {
+
+	admin := router.Group("/admin")
+	admin.Use(middleware.AuthMiddleware())
+
+	{
+		admin.PATCH("/promote/:user_id", controllers.PromoteUser)
+		admin.GET("/users", controllers.GetUsers)
+	}
+}
