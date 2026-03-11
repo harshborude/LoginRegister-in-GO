@@ -2,15 +2,29 @@ package utils
 
 import (
 	"fmt"
+	"log"
+	"os"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-
-	"os"
 )
 
-var accessSecret = []byte(os.Getenv("JWT_ACCESS_SECRET"))
-var refreshSecret = []byte(os.Getenv("JWT_REFRESH_SECRET"))
+var accessSecret []byte
+var refreshSecret []byte
+
+// Initialize JWT secrets AFTER env variables are loaded
+func InitJWT() {
+
+	access := os.Getenv("JWT_ACCESS_SECRET")
+	refresh := os.Getenv("JWT_REFRESH_SECRET")
+
+	if access == "" || refresh == "" {
+		log.Fatal("JWT secrets not set in environment variables")
+	}
+
+	accessSecret = []byte(access)
+	refreshSecret = []byte(refresh)
+}
 
 type Claims struct {
 	UserID uint
